@@ -7,11 +7,11 @@
     <owners>Sam Harwell</owners>
     <description>The C# target of the ANTLR 4 parser generator for Visual Studio 2010+ projects. This package supports projects targeting .NET 2.0 or newer, and built using Visual Studio 2010 or newer.</description>
     <language>en-us</language>
-    <projectUrl>https://github.com/sharwell/antlr4cs</projectUrl>
-    <licenseUrl>https://raw.github.com/sharwell/antlr4cs/master/LICENSE.txt</licenseUrl>
+    <projectUrl>https://github.com/tunnelvisionlabs/antlr4cs</projectUrl>
+    <licenseUrl>https://raw.github.com/tunnelvisionlabs/antlr4cs/master/LICENSE.txt</licenseUrl>
     <iconUrl>https://raw.github.com/antlr/website-antlr4/master/images/icons/antlr.png</iconUrl>
-    <copyright>Copyright © Sam Harwell 2014</copyright>
-    <releaseNotes>https://github.com/sharwell/antlr4cs/releases/v$version$</releaseNotes>
+    <copyright>Copyright © Sam Harwell 2015</copyright>
+    <releaseNotes>https://github.com/tunnelvisionlabs/antlr4cs/releases/v$version$</releaseNotes>
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
     <developmentDependency>true</developmentDependency>
     <tags>antlr antlr4 parsing</tags>
@@ -25,6 +25,25 @@
     <!-- Tools -->
 
     <file src="..\tool\target\antlr4-csharp-$CSharpToolVersion$-complete.jar" target="tools"/>
+    <file src="..\runtime\CSharp\packages\IKVM-WithExes.7.3.4830.1\tools\ikvm.exe" target="tools"/>
+    <file src="..\runtime\CSharp\packages\IKVM-WithExes.7.3.4830.1\tools\ikvm.exe.config" target="tools"/>
+    <file src="..\runtime\CSharp\packages\IKVM-WithExes.7.3.4830.1\tools\IKVM.OpenJDK.Core.dll" target="tools"/>
+    <file src="..\runtime\CSharp\packages\IKVM-WithExes.7.3.4830.1\tools\IKVM.OpenJDK.Text.dll" target="tools"/>
+    <file src="..\runtime\CSharp\packages\IKVM-WithExes.7.3.4830.1\tools\IKVM.OpenJDK.Charsets.dll" target="tools"/>
+    <file src="..\runtime\CSharp\packages\IKVM-WithExes.7.3.4830.1\tools\IKVM.OpenJDK.Naming.dll" target="tools"/>
+    <file src="..\runtime\CSharp\packages\IKVM-WithExes.7.3.4830.1\tools\IKVM.OpenJDK.Management.dll" target="tools"/>
+    <file src="..\runtime\CSharp\packages\IKVM-WithExes.7.3.4830.1\tools\IKVM.OpenJDK.Beans.dll" target="tools"/>
+    <file src="..\runtime\CSharp\packages\IKVM-WithExes.7.3.4830.1\tools\IKVM.OpenJDK.Corba.dll" target="tools"/>
+    <file src="..\runtime\CSharp\packages\IKVM-WithExes.7.3.4830.1\tools\IKVM.AWT.WinForms.dll" target="tools"/>
+    <file src="..\runtime\CSharp\packages\IKVM-WithExes.7.3.4830.1\tools\IKVM.OpenJDK.Util.dll" target="tools"/>
+    <file src="..\runtime\CSharp\packages\IKVM-WithExes.7.3.4830.1\tools\IKVM.OpenJDK.Security.dll" target="tools"/>
+    <file src="..\runtime\CSharp\packages\IKVM-WithExes.7.3.4830.1\tools\IKVM.Runtime.JNI.dll" target="tools"/>
+    <file src="..\runtime\CSharp\packages\IKVM-WithExes.7.3.4830.1\tools\IKVM.Runtime.dll" target="tools"/>
+    <file src="..\runtime\CSharp\packages\IKVM-WithExes.7.3.4830.1\tools\IKVM.OpenJDK.SwingAWT.dll" target="tools"/>
+    <file src="..\runtime\CSharp\packages\IKVM-WithExes.7.3.4830.1\tools\IKVM.OpenJDK.Remoting.dll" target="tools"/>
+    <file src="..\runtime\CSharp\packages\IKVM-WithExes.7.3.4830.1\tools\IKVM.OpenJDK.XML.API.dll" target="tools"/>
+    <file src="..\runtime\CSharp\packages\IKVM-WithExes.7.3.4830.1\tools\IKVM.OpenJDK.Misc.dll" target="tools"/>
+    <file src="..\runtime\CSharp\packages\IKVM-WithExes.7.3.4830.1\tools\IKVM.OpenJDK.Media.dll" target="tools"/>
 
     <!-- Build Configuration -->
 

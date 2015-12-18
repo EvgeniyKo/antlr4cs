@@ -34,6 +34,10 @@ using Antlr4.Runtime.Atn;
 using Antlr4.Runtime.Misc;
 using Antlr4.Runtime.Sharpen;
 
+#if NET40PLUS
+using System.Runtime.CompilerServices;
+#endif
+
 namespace Antlr4.Runtime
 {
     public abstract class Recognizer<Symbol, ATNInterpreter> : IRecognizer
@@ -41,9 +45,10 @@ namespace Antlr4.Runtime
     {
         public const int Eof = -1;
 
-        private static readonly IDictionary<string[], IDictionary<string, int>> tokenTypeMapCache = new Dictionary<string[], IDictionary<string, int>>();
-
-        private static readonly IDictionary<string[], IDictionary<string, int>> ruleIndexMapCache = new Dictionary<string[], IDictionary<string, int>>();
+#if NET40PLUS
+        private static readonly ConditionalWeakTable<IVocabulary, IDictionary<string, int>> tokenTypeMapCache = new ConditionalWeakTable<IVocabulary, IDictionary<string, int>>();
+        private static readonly ConditionalWeakTable<string[], IDictionary<string, int>> ruleIndexMapCache = new ConditionalWeakTable<string[], IDictionary<string, int>>();
+#endif
 
         [NotNull]
         private IAntlrErrorListener<Symbol>[] _listeners =
@@ -66,6 +71,7 @@ namespace Antlr4.Runtime
         /// error reporting.  The generated parsers implement a method
         /// that overrides this to point to their String[] tokenNames.
         /// </remarks>
+        [System.ObsoleteAttribute(@"Use Recognizer{Symbol, ATNInterpreter}.Vocabulary() instead.")]
         public abstract string[] TokenNames
         {
             get;
@@ -74,6 +80,24 @@ namespace Antlr4.Runtime
         public abstract string[] RuleNames
         {
             get;
+        }
+
+        /// <summary>Get the vocabulary used by the recognizer.</summary>
+        /// <remarks>Get the vocabulary used by the recognizer.</remarks>
+        /// <returns>
+        /// A
+        /// <see cref="IVocabulary"/>
+        /// instance providing information about the
+        /// vocabulary used by the grammar.
+        /// </returns>
+        public virtual IVocabulary Vocabulary
+        {
+            get
+            {
+#pragma warning disable 618 // 'propertyName' is obsolete: message
+                return Antlr4.Runtime.Vocabulary.FromTokenNames(TokenNames);
+#pragma warning restore 618
+            }
         }
 
         /// <summary>Get a map from token names to token types.</summary>
@@ -86,23 +110,32 @@ namespace Antlr4.Runtime
         {
             get
             {
-                string[] tokenNames = TokenNames;
-                if (tokenNames == null)
+#if NET40PLUS
+                return tokenTypeMapCache.GetValue(Vocabulary, CreateTokenTypeMap);
+#else
+                return CreateTokenTypeMap(Vocabulary);
+#endif
+            }
+        }
+
+        protected virtual IDictionary<string, int> CreateTokenTypeMap(IVocabulary vocabulary)
+        {
+            var result = new Dictionary<string, int>();
+            for (int i = 0; i < Atn.maxTokenType; i++)
+            {
+                string literalName = vocabulary.GetLiteralName(i);
+                if (literalName != null)
                 {
-                    throw new NotSupportedException("The current recognizer does not provide a list of token names.");
+                    result[literalName] = i;
                 }
-                lock (tokenTypeMapCache)
+                string symbolicName = vocabulary.GetSymbolicName(i);
+                if (symbolicName != null)
                 {
-                    IDictionary<string, int> result = tokenTypeMapCache.Get(tokenNames);
-                    if (result == null)
-                    {
-                        result = Utils.ToMap(tokenNames);
-                        result["EOF"] = TokenConstants.Eof;
-                        tokenTypeMapCache.Put(tokenNames, result);
-                    }
-                    return result;
+                    result[symbolicName] = i;
                 }
             }
+            result["EOF"] = TokenConstants.Eof;
+            return result;
         }
 
         /// <summary>Get a map from rule names to rule indexes.</summary>
@@ -120,16 +153,11 @@ namespace Antlr4.Runtime
                 {
                     throw new NotSupportedException("The current recognizer does not provide a list of rule names.");
                 }
-                lock (ruleIndexMapCache)
-                {
-                    IDictionary<string, int> result = ruleIndexMapCache.Get(ruleNames);
-                    if (result == null)
-                    {
-                        result = Utils.ToMap(ruleNames);
-                        ruleIndexMapCache.Put(ruleNames, result);
-                    }
-                    return result;
-                }
+#if NET40PLUS
+                return ruleIndexMapCache.GetValue(ruleNames, Utils.ToMap);
+#else
+                return Utils.ToMap(ruleNames);
+#endif
             }
         }
 

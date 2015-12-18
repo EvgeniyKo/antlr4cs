@@ -116,13 +116,23 @@ using ParserRuleContext = Antlr4.Runtime.ParserRuleContext;
 public partial class <file.grammarName>BaseListener : I<file.grammarName>Listener {
 	<file.listenerNames:{lname |
 /// \<summary>
-/// Enter a parse tree produced by \<see cref="<csIdentifier.(file.parserName)>.<csIdentifier.(lname)>"/>.
+<if(file.listenerLabelRuleNames.(lname))>
+/// Enter a parse tree produced by the \<c><lname>\</c>
+/// labeled alternative in \<see cref="<file.parserName>.<file.listenerLabelRuleNames.(lname)>"/>.
+<else>
+/// Enter a parse tree produced by \<see cref="<file.parserName>.<lname>"/>.
+<endif>
 /// \<para>The default implementation does nothing.\</para>
 /// \</summary>
 /// \<param name="context">The parse tree.\</param>
 public virtual void Enter<lname; format="cap">([NotNull] <csIdentifier.(file.parserName)>.<lname; format="cap">Context context) { \}
 /// \<summary>
-/// Exit a parse tree produced by \<see cref="<csIdentifier.(file.parserName)>.<csIdentifier.(lname)>"/>.
+<if(file.listenerLabelRuleNames.(lname))>
+/// Exit a parse tree produced by the \<c><lname>\</c>
+/// labeled alternative in \<see cref="<file.parserName>.<file.listenerLabelRuleNames.(lname)>"/>.
+<else>
+/// Exit a parse tree produced by \<see cref="<file.parserName>.<lname>"/>.
+<endif>
 /// \<para>The default implementation does nothing.\</para>
 /// \</summary>
 /// \<param name="context">The parse tree.\</param>
@@ -204,7 +214,12 @@ using ParserRuleContext = Antlr4.Runtime.ParserRuleContext;
 public partial class <file.grammarName>BaseVisitor\<Result> : AbstractParseTreeVisitor\<Result>, I<file.grammarName>Visitor\<Result> {
 	<file.visitorNames:{lname |
 /// \<summary>
-/// Visit a parse tree produced by \<see cref="<csIdentifier.(file.parserName)>.<csIdentifier.(lname)>"/>.
+<if(file.visitorLabelRuleNames.(lname))>
+/// Visit a parse tree produced by the \<c><lname>\</c>
+/// labeled alternative in \<see cref="<file.parserName>.<file.visitorLabelRuleNames.(lname)>"/>.
+<else>
+/// Visit a parse tree produced by \<see cref="<file.parserName>.<lname>"/>.
+<endif>
 /// \<para>
 /// The default implementation returns the result of calling \<see cref="AbstractParseTreeVisitor{Result\}.VisitChildren(IRuleNode)"/>
 /// on \<paramref name="context"/>.
@@ -238,6 +253,8 @@ fileHeader(grammarFileName, ANTLRVersion) ::= <<
 #pragma warning disable 0219
 // Missing XML comment for publicly visible type or member '...'
 #pragma warning disable 1591
+// Ambiguous reference in cref attribute
+#pragma warning disable 419
 
 >>
 
@@ -253,18 +270,15 @@ public <if(parser.abstractRecognizer)>abstract <endif>partial class <csIdentifie
 	public const int
 		<parser.tokens:{k | <k>=<parser.tokens.(k)>}; separator=", ", wrap, anchor>;
 	<endif>
-	public static readonly string[] tokenNames = {
-		<parser.tokenNames:{t | <t>}; null="\"\<INVALID>\"", separator=", ", wrap, anchor>
-	};
 	public const int
 		<parser.rules:{r | RULE_<r.name> = <r.index>}; separator=", ", wrap, anchor>;
 	public static readonly string[] ruleNames = {
 		<parser.ruleNames:{r | "<r>"}; separator=", ", wrap, anchor>
 	};
 
-	public override string GrammarFileName { get { return "<parser.grammarFileName>"; } }
+	<vocabulary(parser.literalNames, parser.symbolicNames)>
 
-	public override string[] TokenNames { get { return tokenNames; } }
+	public override string GrammarFileName { get { return "<parser.grammarFileName>"; } }
 
 	public override string[] RuleNames { get { return ruleNames; } }
 
@@ -286,6 +300,53 @@ case <f.ruleIndex>: return <f.name>_sempred((<f.ctxType>)_localctx, predIndex);}
 <endif>
 
 	<atn>
+}
+>>
+
+vocabulary(literalNames, symbolicNames) ::= <<
+private static readonly string[] _LiteralNames = {
+	<literalNames:{t | <t>}; null="null", separator=", ", wrap, anchor>
+};
+private static readonly string[] _SymbolicNames = {
+	<symbolicNames:{t | <t>}; null="null", separator=", ", wrap, anchor>
+};
+public static readonly IVocabulary DefaultVocabulary = new Vocabulary(_LiteralNames, _SymbolicNames);
+
+[System.Obsolete("Use Vocabulary instead.")]
+public static readonly string[] tokenNames = GenerateTokenNames(DefaultVocabulary, _SymbolicNames.Length);
+
+private static string[] GenerateTokenNames(IVocabulary vocabulary, int length) {
+	string[] tokenNames = new string[length];
+	for (int i = 0; i \< tokenNames.Length; i++) {
+		tokenNames[i] = vocabulary.GetLiteralName(i);
+		if (tokenNames[i] == null) {
+			tokenNames[i] = vocabulary.GetSymbolicName(i);
+		}
+
+		if (tokenNames[i] == null) {
+			tokenNames[i] = "\<INVALID>";
+		}
+	}
+
+	return tokenNames;
+}
+
+[System.Obsolete]
+public override string[] TokenNames
+{
+	get
+	{
+		return tokenNames;
+	}
+}
+
+[NotNull]
+public override IVocabulary Vocabulary
+{
+	get
+	{
+		return DefaultVocabulary;
+	}
 }
 >>
 
@@ -346,7 +407,9 @@ case <index>: return <actions.(index)>;}; separator="\n">
 
 RuleFunction(currentRule,args,code,locals,ruleCtx,altLabelCtxs,namedActions,finallyAction,postamble,exceptions) ::= <<
 
+<if(ruleCtx)>
 <ruleCtx>
+<endif>
 <altLabelCtxs:{l | <altLabelCtxs.(l)>}; separator="\n">
 
 [RuleVersion(<namedActions.version; null="0">)]
@@ -671,8 +734,9 @@ State = <m.stateNumber>;
 <capture>
 if ( <if(invert)><m.varName> \<= 0 || <else>!<endif>(<expr>) ) {
 	<if(m.labels)><m.labels:{l | <labelref(l)> = }><endif>_errHandler.RecoverInline(this);
+} else {
+	Consume();
 }
-Consume();
 >>
 
 Wildcard(w) ::= <<
@@ -735,11 +799,13 @@ RulePropertyRef_start(r) ::= "(<ctx(r)>.<r.label>!=null?(<ctx(r)>.<r.label>.star
 RulePropertyRef_stop(r)	 ::= "(<ctx(r)>.<r.label>!=null?(<ctx(r)>.<r.label>.stop):null)"
 RulePropertyRef_text(r)	 ::= "(<ctx(r)>.<r.label>!=null?_input.GetText(<ctx(r)>.<r.label>.start,<ctx(r)>.<r.label>.stop):null)"
 RulePropertyRef_ctx(r)	 ::= "<ctx(r)>.<r.label>"
+RulePropertyRef_parser(r)	 ::= "this"
 
 ThisRulePropertyRef_start(r) ::= "_localctx.start"
 ThisRulePropertyRef_stop(r)	 ::= "_localctx.stop"
 ThisRulePropertyRef_text(r)	 ::= "_input.GetText(_localctx.start, _input.Lt(-1))"
 ThisRulePropertyRef_ctx(r)	 ::= "_localctx"
+ThisRulePropertyRef_parser(r)	 ::= "this"
 
 NonLocalAttrRef(s)		 ::= <%((<s.ruleName; format="cap">Context)GetInvokingContext(<s.ruleIndex>)).<csIdentifier.(s.name)>%>
 SetNonLocalAttr(s, rhsChunks)	  ::=
@@ -846,7 +912,7 @@ public override TResult Accept\<TResult>(IParseTreeVisitor\<TResult> visitor) {
 }
 >>
 
-AttributeDecl(d) ::= "<d.type> <csIdentifier.(d.name)>"
+AttributeDecl(d) ::= "<d.type> <csIdentifier.(d.name)><if(d.initValue)> = <d.initValue><endif>"
 
 /** If we don't know location of label def x, use this template */
 labelref(x) ::= "<if(!x.isLocal)><typedContext(x.ctx)>.<endif><csIdentifier.(x.name)>"
@@ -862,15 +928,27 @@ recRuleAltPredicate(ruleName,opPrec)  ::= "Precpred(_ctx, <opPrec>)"
 recRuleSetReturnAction(src,name)	  ::= "$<name>=$<src>.<name>;"
 recRuleSetStopToken()                 ::= "_ctx.stop = _input.Lt(-1);"
 
-recRuleAltStartAction(ruleName, ctxName, label) ::= <<
+recRuleAltStartAction(ruleName, ctxName, label, isListLabel) ::= <<
 _localctx = new <ctxName>Context(_parentctx, _parentState);
-<if(label)>_localctx.<label> = _prevctx;<endif>
+<if(label)>
+<if(isListLabel)>
+_localctx.<label>.Add(_prevctx);
+<else>
+_localctx.<label> = _prevctx;
+<endif>
+<endif>
 PushNewRecursionContext(_localctx, _startState, RULE_<ruleName>);
 >>
 
-recRuleLabeledAltStartAction(ruleName, currentAltLabel, label) ::= <<
+recRuleLabeledAltStartAction(ruleName, currentAltLabel, label, isListLabel) ::= <<
 _localctx = new <currentAltLabel; format="cap">Context(new <ruleName; format="cap">Context(_parentctx, _parentState));
-<if(label)>((<currentAltLabel; format="cap">Context)_localctx).<label> = _prevctx;<endif>
+<if(label)>
+<if(isListLabel)>
+((<currentAltLabel; format="cap">Context)_localctx).<label>.Add(_prevctx);
+<else>
+((<currentAltLabel; format="cap">Context)_localctx).<label> = _prevctx;
+<endif>
+<endif>
 PushNewRecursionContext(_localctx, _startState, RULE_<ruleName>);
 >>
 
@@ -909,14 +987,15 @@ Lexer(lexer, atn, actionFuncs, sempredFuncs, superClass) ::= <<
 public <if(lexer.abstractRecognizer)>abstract <endif>partial class <csIdentifier.(lexer.name)> : <superClass; null="Lexer"> {
 	public const int
 		<lexer.tokens:{k | <tokenType.(k)>=<lexer.tokens.(k)>}; separator=", ", wrap, anchor>;
+	<if(lexer.channels)>
+	public const int
+		<lexer.channels:{k | <csIdentifier.(k)>=<lexer.channels.(k)>}; separator=", ", wrap, anchor>;
+	<endif>
 	<rest(lexer.modes):{m| public const int <modeName.(m)> = <i>;}; separator="\n">
 	public static string[] modeNames = {
 		<lexer.modes:{m| "<m>"}; separator=", ", wrap, anchor>
 	};
 
-	public static readonly string[] tokenNames = {
-		<lexer.tokenNames:{t | <t>}; null="\"\<INVALID>\"", separator=", ", wrap, anchor>
-	};
 	public static readonly string[] ruleNames = {
 		<lexer.ruleNames:{r | "<r>"}; separator=", ", wrap, anchor>
 	};
@@ -929,9 +1008,9 @@ public <if(lexer.abstractRecognizer)>abstract <endif>partial class <csIdentifier
 		_interp = new LexerATNSimulator(this,_ATN);
 	}
 
-	public override string GrammarFileName { get { return "<lexer.grammarFileName>"; } }
+	<vocabulary(lexer.literalNames, lexer.symbolicNames)>
 
-	public override string[] TokenNames { get { return tokenNames; } }
+	public override string GrammarFileName { get { return "<lexer.grammarFileName>"; } }
 
 	public override string[] RuleNames { get { return ruleNames; } }
 

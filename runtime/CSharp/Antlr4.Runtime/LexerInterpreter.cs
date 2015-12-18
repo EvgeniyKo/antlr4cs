@@ -32,6 +32,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Antlr4.Runtime;
 using Antlr4.Runtime.Atn;
+using Antlr4.Runtime.Misc;
 using Antlr4.Runtime.Sharpen;
 
 namespace Antlr4.Runtime
@@ -42,13 +43,23 @@ namespace Antlr4.Runtime
 
         protected internal readonly ATN atn;
 
+        [Obsolete]
         protected internal readonly string[] tokenNames;
 
         protected internal readonly string[] ruleNames;
 
         protected internal readonly string[] modeNames;
 
+        [NotNull]
+        private readonly IVocabulary vocabulary;
+
+        [Obsolete]
         public LexerInterpreter(string grammarFileName, IEnumerable<string> tokenNames, IEnumerable<string> ruleNames, IEnumerable<string> modeNames, ATN atn, ICharStream input)
+            : this(grammarFileName, Antlr4.Runtime.Vocabulary.FromTokenNames(tokenNames.ToArray()), ruleNames, modeNames, atn, input)
+        {
+        }
+
+        public LexerInterpreter(string grammarFileName, IVocabulary vocabulary, IEnumerable<string> ruleNames, IEnumerable<string> modeNames, ATN atn, ICharStream input)
             : base(input)
         {
             if (atn.grammarType != ATNType.Lexer)
@@ -57,9 +68,16 @@ namespace Antlr4.Runtime
             }
             this.grammarFileName = grammarFileName;
             this.atn = atn;
-            this.tokenNames = tokenNames.ToArray();
+#pragma warning disable 612 // 'fieldName' is obsolete
+            this.tokenNames = new string[atn.maxTokenType];
+            for (int i = 0; i < tokenNames.Length; i++)
+            {
+                tokenNames[i] = vocabulary.GetDisplayName(i);
+            }
+#pragma warning restore 612
             this.ruleNames = ruleNames.ToArray();
             this.modeNames = modeNames.ToArray();
+            this.vocabulary = vocabulary;
             this._interp = new LexerATNSimulator(this, atn);
         }
 
@@ -79,6 +97,7 @@ namespace Antlr4.Runtime
             }
         }
 
+        [Obsolete]
         public override string[] TokenNames
         {
             get
@@ -100,6 +119,18 @@ namespace Antlr4.Runtime
             get
             {
                 return modeNames;
+            }
+        }
+
+        public override IVocabulary Vocabulary
+        {
+            get
+            {
+                if (vocabulary != null)
+                {
+                    return vocabulary;
+                }
+                return base.Vocabulary;
             }
         }
     }

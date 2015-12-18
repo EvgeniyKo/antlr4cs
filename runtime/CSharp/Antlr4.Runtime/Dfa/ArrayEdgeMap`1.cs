@@ -32,11 +32,18 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Antlr4.Runtime.Dfa;
 using Antlr4.Runtime.Sharpen;
+using Interlocked = System.Threading.Interlocked;
+
+#if NET45PLUS
+using Volatile = System.Threading.Volatile;
+#elif !PORTABLE && !COMPACT
+using Thread = System.Threading.Thread;
+#endif
 
 namespace Antlr4.Runtime.Dfa
 {
-    /// <author>sam</author>
-    public class ArrayEdgeMap<T> : AbstractEdgeMap<T>
+    /// <author>Sam Harwell</author>
+    public sealed class ArrayEdgeMap<T> : AbstractEdgeMap<T>
         where T : class
     {
         private readonly T[] arrayData;
@@ -53,7 +60,13 @@ namespace Antlr4.Runtime.Dfa
         {
             get
             {
-                return size;
+#if NET45PLUS
+                return Volatile.Read(ref size);
+#elif !PORTABLE && !COMPACT
+                return Thread.VolatileRead(ref size);
+#else
+                return Interlocked.CompareExchange(ref size, 0, 0);
+#endif
             }
         }
 
@@ -61,7 +74,7 @@ namespace Antlr4.Runtime.Dfa
         {
             get
             {
-                return size == 0;
+                return Count == 0;
             }
         }
 
@@ -78,7 +91,12 @@ namespace Antlr4.Runtime.Dfa
                 {
                     return null;
                 }
-                return arrayData[key - minIndex];
+
+#if NET45PLUS
+                return Volatile.Read(ref arrayData[key - minIndex]);
+#else
+                return Interlocked.CompareExchange(ref arrayData[key - minIndex], null, null);
+#endif
             }
         }
 
@@ -86,17 +104,16 @@ namespace Antlr4.Runtime.Dfa
         {
             if (key >= minIndex && key <= maxIndex)
             {
-                T existing = arrayData[key - minIndex];
-                arrayData[key - minIndex] = value;
+                T existing = Interlocked.Exchange(ref arrayData[key - minIndex], value);
                 if (existing == null && value != null)
                 {
-                    size++;
+                    Interlocked.Increment(ref size);
                 }
                 else
                 {
                     if (existing != null && value == null)
                     {
-                        size--;
+                        Interlocked.Decrement(ref size);
                     }
                 }
             }
@@ -105,7 +122,7 @@ namespace Antlr4.Runtime.Dfa
 
         public override AbstractEdgeMap<T> Remove(int key)
         {
-            return ((Antlr4.Runtime.Dfa.ArrayEdgeMap<T>)Put(key, null));
+            return Put(key, null);
         }
 
         public override AbstractEdgeMap<T> PutAll(IEdgeMap<T> m)
@@ -119,17 +136,12 @@ namespace Antlr4.Runtime.Dfa
                 Antlr4.Runtime.Dfa.ArrayEdgeMap<T> other = (Antlr4.Runtime.Dfa.ArrayEdgeMap<T>)m;
                 int minOverlap = Math.Max(minIndex, other.minIndex);
                 int maxOverlap = Math.Min(maxIndex, other.maxIndex);
+                Antlr4.Runtime.Dfa.ArrayEdgeMap<T> result = this;
                 for (int i = minOverlap; i <= maxOverlap; i++)
                 {
-                    T target = other.arrayData[i - other.minIndex];
-                    if (target != null)
-                    {
-                        T current = this.arrayData[i - this.minIndex];
-                        this.arrayData[i - this.minIndex] = target;
-                        size += (current != null ? 0 : 1);
-                    }
+                    result = ((Antlr4.Runtime.Dfa.ArrayEdgeMap<T>)result.Put(i, m[i]));
                 }
-                return this;
+                return result;
             }
             else
             {
@@ -137,21 +149,24 @@ namespace Antlr4.Runtime.Dfa
                 {
                     SingletonEdgeMap<T> other = (SingletonEdgeMap<T>)m;
                     System.Diagnostics.Debug.Assert(!other.IsEmpty);
-                    return ((Antlr4.Runtime.Dfa.ArrayEdgeMap<T>)Put(other.Key, other.Value));
+                    return Put(other.Key, other.Value);
                 }
                 else
                 {
                     if (m is SparseEdgeMap<T>)
                     {
                         SparseEdgeMap<T> other = (SparseEdgeMap<T>)m;
-                        int[] keys = other.Keys;
-                        IList<T> values = other.Values;
-                        Antlr4.Runtime.Dfa.ArrayEdgeMap<T> result = this;
-                        for (int i = 0; i < values.Count; i++)
+                        lock (other)
                         {
-                            result = ((Antlr4.Runtime.Dfa.ArrayEdgeMap<T>)result.Put(keys[i], values[i]));
+                            int[] keys = other.Keys;
+                            IList<T> values = other.Values;
+                            Antlr4.Runtime.Dfa.ArrayEdgeMap<T> result = this;
+                            for (int i = 0; i < values.Count; i++)
+                            {
+                                result = ((Antlr4.Runtime.Dfa.ArrayEdgeMap<T>)result.Put(keys[i], values[i]));
+                            }
+                            return result;
                         }
-                        return result;
                     }
                     else
                     {
@@ -163,15 +178,10 @@ namespace Antlr4.Runtime.Dfa
 
         public override AbstractEdgeMap<T> Clear()
         {
-            Arrays.Fill(arrayData, null);
-            return this;
+            return new EmptyEdgeMap<T>(minIndex, maxIndex);
         }
 
-#if NET45PLUS
-        public override IReadOnlyDictionary<int, T> ToMap()
-#else
-        public override IDictionary<int, T> ToMap()
-#endif
+        public override ReadOnlyDictionary<int, T> ToMap()
         {
             if (IsEmpty)
             {
@@ -187,17 +197,14 @@ namespace Antlr4.Runtime.Dfa
 #endif
             for (int i = 0; i < arrayData.Length; i++)
             {
-                if (arrayData[i] == null)
+                T element = arrayData[i];
+                if (element == null)
                 {
                     continue;
                 }
-                result[i + minIndex] = arrayData[i];
+                result[i + minIndex] = element;
             }
-#if NET45PLUS
             return new ReadOnlyDictionary<int, T>(result);
-#else
-            return result;
-#endif
         }
     }
 }

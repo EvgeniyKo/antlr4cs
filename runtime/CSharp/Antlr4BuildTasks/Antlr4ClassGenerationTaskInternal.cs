@@ -171,6 +171,9 @@ namespace Antlr4.Build.Tasks
                 if (TryGetJavaHome(RegistryView.Registry32, JavaVendor, JavaInstallation, out javaHome))
                     return javaHome;
 
+                if (Directory.Exists(Environment.GetEnvironmentVariable("JAVA_HOME")))
+                    return Environment.GetEnvironmentVariable("JAVA_HOME");
+
                 throw new NotSupportedException("Could not locate a Java installation.");
             }
         }
@@ -211,6 +214,9 @@ namespace Antlr4.Build.Tasks
                 if (TryGetJavaHome(Registry.LocalMachine, JavaVendor, JavaInstallation, out javaHome))
                     return javaHome;
 
+                if (Directory.Exists(Environment.GetEnvironmentVariable("JAVA_HOME")))
+                    return Environment.GetEnvironmentVariable("JAVA_HOME");
+
                 throw new NotSupportedException("Could not locate a Java installation.");
             }
         }
@@ -246,14 +252,24 @@ namespace Antlr4.Build.Tasks
             try
             {
                 string java;
-                if (!string.IsNullOrEmpty(JavaExecutable))
+                try
                 {
-                    java = JavaExecutable;
+                    if (!string.IsNullOrEmpty(JavaExecutable))
+                    {
+                        java = JavaExecutable;
+                    }
+                    else
+                    {
+                        string javaHome = JavaHome;
+                        java = Path.Combine(Path.Combine(javaHome, "bin"), "java.exe");
+                        if (!File.Exists(java))
+                            java = Path.Combine(Path.Combine(javaHome, "bin"), "java");
+                    }
                 }
-                else
+                catch (NotSupportedException)
                 {
-                    string javaHome = JavaHome;
-                    java = Path.Combine(Path.Combine(javaHome, "bin"), "java.exe");
+                    // Fall back to using IKVM
+                    java = Path.Combine(Path.GetDirectoryName(ToolPath), "ikvm.exe");
                 }
 
                 List<string> arguments = new List<string>();
@@ -275,7 +291,7 @@ namespace Antlr4.Build.Tasks
                     arguments.Add("-no-visitor");
 
                 if (ForceAtn)
-                    arguments.Add("-force-atn");
+                    arguments.Add("-Xforce-atn");
 
                 if (AbstractGrammar)
                     arguments.Add("-Dabstract=true");
@@ -285,11 +301,11 @@ namespace Antlr4.Build.Tasks
                     string framework = TargetFrameworkVersion;
                     if (string.IsNullOrEmpty(framework))
                         framework = "v2.0";
-                    if (framework == "v4.5.1")
+                    else if (new Version(framework.Substring(1)) >= new Version(4, 5))
                         framework = "v4.5";
 
                     string language;
-                    if (TargetLanguage.Equals("CSharp"))
+                    if (TargetLanguage.Equals("CSharp", StringComparison.OrdinalIgnoreCase))
                         language = TargetLanguage + '_' + framework.Replace('.', '_');
                     else
                         language = TargetLanguage;

@@ -192,6 +192,11 @@ namespace Antlr4.Runtime.Atn
         protected internal virtual int ExecATN(ICharStream input, DFAState ds0)
         {
             //System.out.println("enter exec index "+input.index()+" from "+ds0.configs);
+            if (ds0.IsAcceptState)
+            {
+                // allow zero-length tokens
+                CaptureSimState(prevAccept, input, ds0);
+            }
             int t = input.La(1);
             DFAState s = ds0;
             // s is current/from DFA state
@@ -224,7 +229,15 @@ namespace Antlr4.Runtime.Atn
                 {
                     break;
                 }
-                if (target.isAcceptState)
+                // If this is a consumable input element, make sure to consume before
+                // capturing the accept state so the input index, line, and char
+                // position accurately reflect the state of the interpreter at the
+                // end of the token.
+                if (t != IntStreamConstants.Eof)
+                {
+                    Consume(input);
+                }
+                if (target.IsAcceptState)
                 {
                     CaptureSimState(prevAccept, input, target);
                     if (t == IntStreamConstants.Eof)
@@ -232,11 +245,7 @@ namespace Antlr4.Runtime.Atn
                         break;
                     }
                 }
-                if (t != IntStreamConstants.Eof)
-                {
-                    Consume(input);
-                    t = input.La(1);
-                }
+                t = input.La(1);
                 s = target;
             }
             // flip; current DFA target becomes new src/from state
@@ -322,9 +331,9 @@ namespace Antlr4.Runtime.Atn
         {
             if (prevAccept.dfaState != null)
             {
-                LexerActionExecutor lexerActionExecutor = prevAccept.dfaState.lexerActionExecutor;
+                LexerActionExecutor lexerActionExecutor = prevAccept.dfaState.LexerActionExecutor;
                 Accept(input, lexerActionExecutor, startIndex, prevAccept.index, prevAccept.line, prevAccept.charPos);
-                return prevAccept.dfaState.prediction;
+                return prevAccept.dfaState.Prediction;
             }
             else
             {
@@ -390,10 +399,6 @@ namespace Antlr4.Runtime.Atn
             input.Seek(index);
             this.line = line;
             this.charPositionInLine = charPos;
-            if (input.La(1) != IntStreamConstants.Eof)
-            {
-                Consume(input);
-            }
             if (lexerActionExecutor != null && recog != null)
             {
                 lexerActionExecutor.Execute(recog, input, startIndex);
@@ -722,14 +727,14 @@ namespace Antlr4.Runtime.Atn
         protected internal virtual DFAState AddDFAState(ATNConfigSet configs)
         {
             System.Diagnostics.Debug.Assert(!configs.HasSemanticContext);
-            DFAState proposed = new DFAState(configs, 0, MaxDfaEdge);
+            DFAState proposed = new DFAState(atn.modeToDFA[mode], configs);
             DFAState existing;
             if (atn.modeToDFA[mode].states.TryGetValue(proposed, out existing))
             {
                 return existing;
             }
             configs.OptimizeConfigs(this);
-            DFAState newState = new DFAState(configs.Clone(true), 0, MaxDfaEdge);
+            DFAState newState = new DFAState(atn.modeToDFA[mode], configs.Clone(true));
             ATNConfig firstConfigWithRuleStopState = null;
             foreach (ATNConfig c in configs)
             {
@@ -741,9 +746,9 @@ namespace Antlr4.Runtime.Atn
             }
             if (firstConfigWithRuleStopState != null)
             {
-                newState.isAcceptState = true;
-                newState.lexerActionExecutor = firstConfigWithRuleStopState.ActionExecutor;
-                newState.prediction = atn.ruleToTokenType[firstConfigWithRuleStopState.State.ruleIndex];
+                int prediction = atn.ruleToTokenType[firstConfigWithRuleStopState.State.ruleIndex];
+                LexerActionExecutor lexerActionExecutor = firstConfigWithRuleStopState.ActionExecutor;
+                newState.AcceptStateInfo = new AcceptStateInfo(prediction, lexerActionExecutor);
             }
             return atn.modeToDFA[mode].AddState(newState);
         }

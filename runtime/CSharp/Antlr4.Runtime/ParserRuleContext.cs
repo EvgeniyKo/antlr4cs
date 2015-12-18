@@ -29,6 +29,7 @@
  */
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
 using Antlr4.Runtime.Sharpen;
@@ -41,9 +42,8 @@ namespace Antlr4.Runtime
     /// A rule invocation record for parsing.
     /// Contains all of the information about the current rule not stored in the
     /// RuleContext. It handles parse tree children list, Any ATN state
-    /// tracing, and the default values available for rule indications:
-    /// start, stop, rule index, current alt number, current
-    /// ATN state.
+    /// tracing, and the default values available for rule invocations:
+    /// start, stop, rule index, current alt number.
     /// Subclasses made for each rule and grammar track the parameters,
     /// return values, locals, and labels specific to that rule. These
     /// are the objects that are returned from rules.
@@ -141,10 +141,16 @@ namespace Antlr4.Runtime
             }
         }
 
-        /// <summary>COPY a ctx (I'm deliberately not using copy constructor)</summary>
+        /// <summary>
+        /// COPY a ctx (I'm deliberately not using copy constructor) to avoid
+        /// confusion with creating node with parent.
+        /// </summary>
+        /// <remarks>
+        /// COPY a ctx (I'm deliberately not using copy constructor) to avoid
+        /// confusion with creating node with parent. Does not copy children.
+        /// </remarks>
         public virtual void CopyFrom(Antlr4.Runtime.ParserRuleContext ctx)
         {
-            // from RuleContext
             this.parent = ctx.parent;
             this.invokingState = ctx.invokingState;
             this.start = ctx.start;
@@ -284,11 +290,7 @@ namespace Antlr4.Runtime
             return null;
         }
 
-#if NET45PLUS
-        public virtual IReadOnlyList<ITerminalNode> GetTokens(int ttype)
-#else
         public virtual ITerminalNode[] GetTokens(int ttype)
-#endif
         {
             if (children == null)
             {
@@ -315,11 +317,7 @@ namespace Antlr4.Runtime
             {
                 return Collections.EmptyList<ITerminalNode>();
             }
-#if NET45PLUS
-            return tokens;
-#else
             return tokens.ToArray();
-#endif
         }
 
         public virtual T GetRuleContext<T>(int i)
@@ -328,13 +326,8 @@ namespace Antlr4.Runtime
             return GetChild<T>(i);
         }
 
-#if NET45PLUS
-        public virtual IReadOnlyList<T> GetRuleContexts<T>()
-            where T : Antlr4.Runtime.ParserRuleContext
-#else
         public virtual T[] GetRuleContexts<T>()
             where T : Antlr4.Runtime.ParserRuleContext
-#endif
         {
             if (children == null)
             {
@@ -356,11 +349,7 @@ namespace Antlr4.Runtime
             {
                 return Collections.EmptyList<T>();
             }
-#if NET45PLUS
-            return contexts;
-#else
             return contexts.ToArray();
-#endif
         }
 
         public override int ChildCount
@@ -383,6 +372,12 @@ namespace Antlr4.Runtime
             }
         }
 
+        /// <summary>Get the initial token in this context.</summary>
+        /// <remarks>
+        /// Get the initial token in this context.
+        /// Note that the range from start to stop is inclusive, so for rules that do not consume anything
+        /// (for example, zero length or error productions) this token may exceed stop.
+        /// </remarks>
         public virtual IToken Start
         {
             get
@@ -391,6 +386,12 @@ namespace Antlr4.Runtime
             }
         }
 
+        /// <summary>Get the final token in this context.</summary>
+        /// <remarks>
+        /// Get the final token in this context.
+        /// Note that the range from start to stop is inclusive, so for rules that do not consume anything
+        /// (for example, zero length or error productions) this token may precede start.
+        /// </remarks>
         public virtual IToken Stop
         {
             get

@@ -94,7 +94,8 @@ namespace Antlr4.Runtime.Atn
             {
                 this._input = input;
                 this._startIndex = input.Index;
-                this._sllStopIndex = -1;
+                // it's possible for SLL to reach a conflict state without consuming any input
+                this._sllStopIndex = _startIndex - 1;
                 this._llStopIndex = -1;
                 this.currentDecision = decision;
                 this.currentState = null;
@@ -266,7 +267,7 @@ namespace Antlr4.Runtime.Atn
                 // context sensitivity.
                 decisions[currentDecision].contextSensitivities.Add(new ContextSensitivityInfo(currentDecision, currentState, _input, startIndex, stopIndex));
             }
-            decisions[currentDecision].ambiguities.Add(new AmbiguityInfo(currentDecision, currentState, _input, startIndex, stopIndex));
+            decisions[currentDecision].ambiguities.Add(new AmbiguityInfo(currentDecision, currentState, ambigAlts, _input, startIndex, stopIndex));
             base.ReportAmbiguity(dfa, D, startIndex, stopIndex, exact, ambigAlts, configs);
         }
 

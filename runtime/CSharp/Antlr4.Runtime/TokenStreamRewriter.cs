@@ -106,7 +106,7 @@ namespace Antlr4.Runtime
     /// ...
     /// rewriter.insertAfter(t, "text to put after t");}
     /// rewriter.insertAfter(u, "text after u");}
-    /// System.out.println(tokens.toString());
+    /// System.out.println(rewriter.getText());
     /// </pre>
     /// <p>
     /// You can also have multiple "instruction streams" and get multiple rewrites
@@ -114,10 +114,10 @@ namespace Antlr4.Runtime
     /// that name again when printing the buffer. This could be useful for generating
     /// a C file and also its header file--all from the same buffer:</p>
     /// <pre>
-    /// tokens.insertAfter("pass1", t, "text to put after t");}
-    /// tokens.insertAfter("pass2", u, "text after u");}
-    /// System.out.println(tokens.toString("pass1"));
-    /// System.out.println(tokens.toString("pass2"));
+    /// rewriter.insertAfter("pass1", t, "text to put after t");}
+    /// rewriter.insertAfter("pass2", u, "text after u");}
+    /// System.out.println(rewriter.getText("pass1"));
+    /// System.out.println(rewriter.getText("pass2"));
     /// </pre>
     /// <p>
     /// If you don't use named rewrite streams, a "default" stream is used as the
@@ -275,7 +275,7 @@ namespace Antlr4.Runtime
         /// <remarks>
         /// Rollback the instruction stream for a program so that
         /// the indicated instruction (via instructionIndex) is no
-        /// longer in the stream.  UNTESTED!
+        /// longer in the stream. UNTESTED!
         /// </remarks>
         public virtual void Rollback(string programName, int instructionIndex)
         {
@@ -462,6 +462,20 @@ namespace Antlr4.Runtime
         }
 
         /// <summary>
+        /// Return the text from the original tokens altered per the
+        /// instructions given to this rewriter in programName.
+        /// </summary>
+        /// <remarks>
+        /// Return the text from the original tokens altered per the
+        /// instructions given to this rewriter in programName.
+        /// </remarks>
+        /// <since>4.5</since>
+        public virtual string GetText(string programName)
+        {
+            return GetText(programName, Interval.Of(0, tokens.Size - 1));
+        }
+
+        /// <summary>
         /// Return the text associated with the tokens in the interval from the
         /// original token stream but with the alterations given to this rewriter.
         /// </summary>
@@ -555,8 +569,8 @@ namespace Antlr4.Runtime
         /// </summary>
         /// <remarks>
         /// We need to combine operations and report invalid operations (like
-        /// overlapping replaces that are not completed nested).  Inserts to
-        /// same index need to be combined etc...   Here are the cases:
+        /// overlapping replaces that are not completed nested). Inserts to
+        /// same index need to be combined etc...  Here are the cases:
         /// I.i.u I.j.v								leave alone, nonoverlapping
         /// I.i.u I.i.v								combine: Iivu
         /// R.i-j.u R.x-y.v	| i-j in x-y			delete first R
@@ -573,7 +587,7 @@ namespace Antlr4.Runtime
         /// R.x-y.v I.i.u | i not in x-y			leave alone, nonoverlapping
         /// I.i.u = insert u before op @ index i
         /// R.x-y.u = replace x-y indexed tokens with u
-        /// First we need to examine replaces.  For any replace op:
+        /// First we need to examine replaces. For any replace op:
         /// 1. wipe out any insertions before op within that range.
         /// 2. Drop any replace op before that is contained completely within
         /// that range.
@@ -586,7 +600,7 @@ namespace Antlr4.Runtime
         /// Don't actually delete; make op null in list. Easier to walk list.
         /// Later we can throw as we add to index &#x2192; op map.
         /// Note that I.2 R.2-2 will wipe out I.2 even though, technically, the
-        /// inserted stuff would be before the replace range.  But, if you
+        /// inserted stuff would be before the replace range. But, if you
         /// add tokens in front of a method body '{' and then delete the method
         /// body, I think the stuff before the '{' you added should disappear too.
         /// Return a map from token index to operation.
